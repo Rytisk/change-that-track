@@ -16,6 +16,8 @@ public class MainActivity extends AppCompatActivity {
     private ImageView _shuffle;
     private ImageView _repeat;
 
+    private String ip = "http://10.0.2.2";
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -31,7 +33,7 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public void onClick(View v) {
                 HTTP task = new HTTP();
-                task.execute("http://10.0.2.2:38475/?action=player_play");
+                task.execute(ip + ":38475/?action=player_play");
             }
         });
 
@@ -39,7 +41,7 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public void onClick(View v) {
                 HTTP task = new HTTP();
-                task.execute("http://10.0.2.2:38475/?action=player_next");
+                task.execute(ip + ":38475/?action=player_next");
             }
         });
 
@@ -47,7 +49,7 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public void onClick(View v) {
                 HTTP task = new HTTP();
-                task.execute("http://10.0.2.2:38475/?action=player_prevous");
+                task.execute(ip + ":38475/?action=player_prevous");
             }
         });
 
@@ -55,7 +57,7 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public void onClick(View v) {
                 HTTP task = new HTTP();
-                task.execute("http://10.0.2.2:38475/?action=set_player_status&statusType=shuffle&value=1");
+                task.execute(ip + ":38475/?action=set_player_status&statusType=shuffle&value=1");
             }
         });
 
@@ -63,7 +65,7 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public void onClick(View v) {
                 HTTP task = new HTTP();
-                task.execute("http://10.0.2.2:38475/?action=set_player_status&statusType=repeat&value=1");
+                task.execute(ip + ":38475/?action=set_player_status&statusType=repeat&value=1");
             }
         });
 
