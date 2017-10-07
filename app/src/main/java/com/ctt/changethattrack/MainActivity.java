@@ -1,5 +1,6 @@
 package com.ctt.changethattrack;
 
+import android.content.SharedPreferences;
 import android.os.AsyncTask;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
@@ -24,7 +25,7 @@ public class MainActivity extends AppCompatActivity {
     private ImageButton _repeat;
     private TextView _songInfo;
 
-    private String ip = "http://192.168.1.9";
+    private String _endpoint;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -38,13 +39,19 @@ public class MainActivity extends AppCompatActivity {
         _repeat = (ImageButton)findViewById(R.id.img_repeat);
         _songInfo = (TextView)findViewById(R.id.txt_song_info);
 
+        SharedPreferences settings = getSharedPreferences("UserInfo", 0);
+        String ip = settings.getString("IP", "").toString();
+        String port = settings.getString("Port", "").toString();
+
+        _endpoint = "http://" + ip + ":" + port;
+
         updateSongInfo();
 
         _play.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
                 HTTP task = new HTTP();
-                task.execute(ip + ":38475/?action=player_play");
+                task.execute(_endpoint + "/?action=player_play");
             }
         });
 
@@ -52,7 +59,7 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public void onClick(View v) {
                 HTTP task = new HTTP();
-                task.execute(ip + ":38475/?action=player_next");
+                task.execute(_endpoint + "/?action=player_next");
                 updateSongInfo();
             }
         });
@@ -61,7 +68,7 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public void onClick(View v) {
                 HTTP task = new HTTP();
-                task.execute(ip + ":38475/?action=player_prevous");
+                task.execute(_endpoint + "/?action=player_prevous");
                 updateSongInfo();
             }
         });
@@ -70,7 +77,7 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public void onClick(View v) {
                 HTTP task = new HTTP();
-                task.execute(ip + ":38475/?action=set_player_status&statusType=shuffle&value=1");
+                task.execute(_endpoint + "/?action=set_player_status&statusType=shuffle&value=1");
             }
         });
 
@@ -78,7 +85,7 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public void onClick(View v) {
                 HTTP task = new HTTP();
-                task.execute(ip + ":38475/?action=set_player_status&statusType=repeat&value=1");
+                task.execute(_endpoint + "/?action=set_player_status&statusType=repeat&value=1");
             }
         });
     }
@@ -88,7 +95,7 @@ public class MainActivity extends AppCompatActivity {
         HTTP task = new HTTP();
         String songInfo = null;
         try {
-            String response = task.execute(ip + ":38475/?action=get_song_current").get();
+            String response = task.execute(_endpoint + "/?action=get_song_current").get();
             JSONObject obj = new JSONObject(response);
             songInfo = obj.getString("PlayingFileName");
         } catch (InterruptedException e) {
