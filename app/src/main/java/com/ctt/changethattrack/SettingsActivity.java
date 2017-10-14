@@ -6,6 +6,7 @@ import android.os.Bundle;
 import android.support.v7.app.AppCompatActivity;
 import android.view.View;
 import android.widget.Button;
+import android.widget.CheckBox;
 import android.widget.EditText;
 
 /**
@@ -16,6 +17,7 @@ public class SettingsActivity extends AppCompatActivity {
 
     private EditText _serverIP;
     private EditText _port;
+    private CheckBox _autoLogin;
     private Button _connect;
 
     @Override
@@ -25,6 +27,7 @@ public class SettingsActivity extends AppCompatActivity {
 
         _serverIP = (EditText)findViewById(R.id.inServerIP);
         _port = (EditText)findViewById(R.id.inPort);
+        _autoLogin = (CheckBox)findViewById(R.id.checkBox);
 
         _connect = (Button)findViewById(R.id.btnConnect);
 
@@ -35,6 +38,7 @@ public class SettingsActivity extends AppCompatActivity {
                 SharedPreferences.Editor editor = settings.edit();
                 editor.putString("IP",_serverIP.getText().toString());
                 editor.putString("Port",_port.getText().toString());
+                editor.putBoolean("AutoLogin", _autoLogin.isChecked());
                 editor.commit();
 
                 Intent i = new Intent(SettingsActivity.this, MainActivity.class);
