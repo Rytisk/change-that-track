@@ -1,3 +1,11 @@
 <resources>
     <string name="app_name">ChangeThatTrack</string>
+    <string-array name="fragments_array">
+        <item>Player</item>
+        <item>Settings</item>
+        <item>Playlist</item>
+        <item>Recent tracks</item>
+    </string-array>
+    <string name="txtPort">Port:</string>
+    <string name="txtIP">Server IP:</string>
 </resources>
