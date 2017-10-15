@@ -36,8 +36,6 @@ public class PlaylistFragment extends Fragment {
 
     private OnDataPass dataPasser;
 
-
-
     class Playlist{
         private String mName;
         private String mID;
@@ -74,6 +72,12 @@ public class PlaylistFragment extends Fragment {
         mTabHost = (TabHost)rootView.findViewById(R.id.th_set_menu_tabhost);
         mTabHost.setup();
 
+        setupPlaylist();
+
+        return rootView;
+    }
+
+    void setupPlaylist(){
         for(final Playlist playlist : getPlaylistList()){
             final ListView list = new ListView(getActivity());
             list.setId(Integer.parseInt(playlist.getID()));
@@ -100,7 +104,6 @@ public class PlaylistFragment extends Fragment {
             );
             mTabHost.addTab(ts1);
         }
-        return rootView;
     }
 
     @Override
@@ -122,11 +125,7 @@ public class PlaylistFragment extends Fragment {
             JSONObject obj = new JSONObject(response);
             name = obj.getString("PlayingFileName");
 
-        } catch (InterruptedException e) {
-            e.printStackTrace();
-        } catch (ExecutionException e) {
-            e.printStackTrace();
-        } catch (JSONException e) {
+        } catch (InterruptedException | JSONException | ExecutionException e) {
             e.printStackTrace();
         }
         return name;
@@ -142,11 +141,7 @@ public class PlaylistFragment extends Fragment {
                 JSONObject ob = arr.getJSONObject(i);
                 playlists.add(new Playlist(ob.getString("name"), ob.getString("id")));
             }
-        } catch (InterruptedException e) {
-            e.printStackTrace();
-        } catch (ExecutionException e) {
-            e.printStackTrace();
-        } catch (JSONException e) {
+        } catch (InterruptedException | JSONException | ExecutionException e) {
             e.printStackTrace();
         }
         return playlists;
@@ -165,11 +160,7 @@ public class PlaylistFragment extends Fragment {
                 tracksList.add(ob.getString("name"));
             }
 
-        } catch (InterruptedException e) {
-            e.printStackTrace();
-        } catch (ExecutionException e) {
-            e.printStackTrace();
-        } catch (JSONException e) {
+        } catch (InterruptedException | JSONException | ExecutionException e) {
             e.printStackTrace();
         }
         String[] tracks = new String[tracksList.size()];

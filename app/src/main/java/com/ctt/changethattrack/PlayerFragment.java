@@ -5,6 +5,7 @@ import android.app.Fragment;
 import android.content.Context;
 import android.content.SharedPreferences;
 import android.content.pm.ActivityInfo;
+import android.os.AsyncTask;
 import android.os.Handler;
 import android.os.Bundle;
 import android.view.LayoutInflater;
@@ -18,6 +19,7 @@ import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
 
 public class PlayerFragment extends Fragment {
 
@@ -27,6 +29,8 @@ public class PlayerFragment extends Fragment {
     private ImageButton mBtnShuffle;
     private ImageButton mBtnRepeat;
     private TextView mSongInfo;
+    private TextView mTxtMaxPosition;
+    private TextView mTxtCurrentPosition;
     private SeekBar mSeekBar;
 
     private String mEndpoint;
@@ -52,12 +56,24 @@ public class PlayerFragment extends Fragment {
         mBtnRepeat = (ImageButton)rootView.findViewById(R.id.btnRepeat);
         mSongInfo = (TextView)rootView.findViewById(R.id.txt_song_info);
         mSeekBar = (SeekBar)rootView.findViewById(R.id.seek_bar);
+        mTxtMaxPosition = (TextView)rootView.findViewById(R.id.txtMaxPosition);
+        mTxtCurrentPosition = (TextView)rootView.findViewById(R.id.txtCurrentPosition);
+
 
         SharedPreferences settings = getActivity().getSharedPreferences("UserInfo", 0);
         String ip = settings.getString("IP", "10.0.2.2");
         String port = settings.getString("Port", "38475");
 
         mEndpoint = "http://" + ip + ":" + port;
+
+        try{
+            HTTP task = new HTTP();
+            task.execute(mEndpoint).get(2000, TimeUnit.MILLISECONDS);
+        }catch(Exception ex){
+            getActivity().getFragmentManager().beginTransaction()
+                    .replace(R.id.content_frame,new SettingsFragment()).commit();
+            return rootView;
+        }
 
         updateSongInfo();
         updateStatuses();
@@ -110,20 +126,7 @@ public class PlayerFragment extends Fragment {
             }
         });
 
-        final Handler mHandler = new Handler();
-
-        getActivity().runOnUiThread(new Runnable() {
-
-            @Override
-            public void run() {
-                int mCurrentPosition = getTrackPosition();
-                if(mCurrentPosition == 0){
-                    updateSongInfo();
-                }
-                mSeekBar.setProgress(mCurrentPosition);
-                mHandler.postDelayed(this, 1000);
-            }
-        });
+        setupTrackSeekBar();
 
         mSeekBar.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
             @Override
@@ -140,6 +143,24 @@ public class PlayerFragment extends Fragment {
             }
         });
         return rootView;
+    }
+
+    void setupTrackSeekBar(){
+        final Handler mHandler = new Handler();
+
+        getActivity().runOnUiThread(new Runnable() {
+
+            @Override
+            public void run() {
+                int currentPosition = getTrackPosition();
+                if(currentPosition == 0){
+                    updateSongInfo();
+                }
+                mSeekBar.setProgress(currentPosition);
+                mHandler.postDelayed(this, 1000);
+                mTxtCurrentPosition.setText(getTime(currentPosition));
+            }
+        });
     }
 
     @Override
@@ -159,14 +180,23 @@ public class PlayerFragment extends Fragment {
             String response = task.execute(mEndpoint + "/?action=get_song_current").get();
             JSONObject obj = new JSONObject(response);
             songInfo = obj.getString("PlayingFileName");
-            mSeekBar.setMax(Integer.parseInt(obj.getString("length")));
+            int length = Integer.parseInt(obj.getString("length"));
+            mSeekBar.setMax(length);
             mSeekBar.setProgress(0);
+            mTxtMaxPosition.setText(getTime(length));
+
             passData(new Track(obj.getInt("PlayingFile"), songInfo, obj.getInt("PlayingList")));
         } catch (InterruptedException | JSONException | ExecutionException e) {
             e.printStackTrace();
         }
 
         mSongInfo.setText(songInfo);
+    }
+
+    String getTime(int position){
+        String minutes = position/60 < 10 ? "0"+Integer.toString(position/60) : Integer.toString(position/60);
+        String seconds = position%60 < 10 ? "0"+Integer.toString(position%60) : Integer.toString(position%60);
+        return minutes + ":" + seconds;
     }
 
     void updateStatuses() {

@@ -85,11 +85,26 @@ public class MainActivity extends Activity implements PlaylistFragment.OnDataPas
 
         FragmentManager fragmentManager = getFragmentManager();
         fragmentManager.beginTransaction()
-                .replace(R.id.content_frame, fragment)
+                .replace(R.id.content_frame, fragment).addToBackStack(null)
                 .commit();
 
         mDrawerList.setItemChecked(position, true);
         mDrawerLayout.closeDrawer(mDrawerList);
+    }
+
+    @Override
+    public void onBackPressed() {
+
+        int count = getFragmentManager().getBackStackEntryCount();
+
+        if (count == 1) {
+            getFragmentManager().popBackStack();
+            super.onBackPressed();
+            //additional code
+        } else {
+            getFragmentManager().popBackStack();
+        }
+
     }
 
     void setVolume(int volume){
@@ -111,6 +126,28 @@ public class MainActivity extends Activity implements PlaylistFragment.OnDataPas
     }
 
     @Override
+    public boolean onKeyDown(int keyCode, KeyEvent event) {
+        switch (keyCode) {
+            case KeyEvent.KEYCODE_VOLUME_UP:
+                int volUp = getVolume();
+                if (volUp + 10 <= 100)
+                    setVolume(volUp + 10);
+                else if (volUp > 90)
+                    setVolume(100);
+                return true;
+            case KeyEvent.KEYCODE_VOLUME_DOWN:
+                int volDown = getVolume();
+                if (volDown - 10 >= 0)
+                    setVolume(volDown - 10);
+                else if (volDown < 10)
+                    setVolume(0);
+                return true;
+            default:
+                return super.onKeyDown(keyCode, event);
+        }
+    }
+
+    @Override
     public void onDataPass(Track data) {
         if(mRecentTracks.contains(data)){
             int i = mRecentTracks.indexOf(data);
@@ -125,25 +162,5 @@ public class MainActivity extends Activity implements PlaylistFragment.OnDataPas
         return mRecentTracks;
     }
 
-    @Override
-    public boolean onKeyDown(int keyCode, KeyEvent event) {
-        switch (keyCode) {
-            case KeyEvent.KEYCODE_VOLUME_UP:
-                int volUp = getVolume();
-                if(volUp + 10 <= 100)
-                    setVolume(volUp + 10);
-                else if(volUp > 90)
-                    setVolume(100);
-                return true;
-            case KeyEvent.KEYCODE_VOLUME_DOWN:
-                int volDown = getVolume();
-                if(volDown - 10 >= 0)
-                    setVolume(volDown - 10);
-                else if(volDown < 10)
-                    setVolume(0);
-                return true;
-            default:
-                return false;
-        }
-    }
+
 }

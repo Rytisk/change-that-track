@@ -3,9 +3,19 @@
     android:orientation="vertical" android:layout_width="match_parent"
     android:layout_height="match_parent">
 
+    <TextView
+        android:id="@+id/title"
+        android:layout_width="match_parent"
+        android:layout_height="48dp"
+        android:clickable="false"
+        android:gravity="center_vertical"
+        android:paddingLeft="20dp"
+        android:text="Recently played:"
+        android:textAppearance="@android:style/TextAppearance.DeviceDefault.Large" />
+
     <ListView
         android:layout_width="match_parent"
-        android:layout_height="match_parent"
+        android:layout_height="542dp"
         android:id="@+id/recentTracks"
         android:padding="5dp"
         android:numColumns="3"

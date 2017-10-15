@@ -36,13 +36,13 @@ public class SettingsFragment extends Fragment {
         mTxtServerIP = (EditText)rootView.findViewById(R.id.inServerIP);
         mTxtPort = (EditText)rootView.findViewById(R.id.inPort);
         mChbAutoLogin = (CheckBox)rootView.findViewById(R.id.checkBox);
-
         mBtnSave = (Button)rootView.findViewById(R.id.btnSave);
 
         SharedPreferences settings = getActivity().getSharedPreferences("UserInfo", 0);
         boolean autoLogin = settings.getBoolean("AutoLogin", false);
         String ip = settings.getString("IP", "10.0.2.2");
         String port = settings.getString("Port", "38475");
+
         mTxtServerIP.setText(ip);
         mTxtPort.setText(port);
         mChbAutoLogin.setChecked(autoLogin);
@@ -58,8 +58,8 @@ public class SettingsFragment extends Fragment {
                 editor.putBoolean("AutoLogin", mChbAutoLogin.isChecked());
                 editor.commit();
 
-                Toast.makeText(getActivity(), "Settings saved.",
-                        Toast.LENGTH_LONG).show();
+                getActivity().getFragmentManager().beginTransaction()
+                        .replace(R.id.content_frame,new PlayerFragment()).commit();
             }
         });
         return rootView;
