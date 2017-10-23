@@ -7,6 +7,7 @@
     <!-- The main content view -->
     <FrameLayout
         android:id="@+id/content_frame"
+        android:background="@android:color/background_light"
         android:layout_width="match_parent"
         android:layout_height="match_parent" />
     <!-- The navigation drawer -->

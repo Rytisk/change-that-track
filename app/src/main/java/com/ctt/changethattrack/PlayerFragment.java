@@ -14,12 +14,15 @@ import android.view.ViewGroup;
 import android.widget.ImageButton;
 import android.widget.SeekBar;
 import android.widget.TextView;
+import android.widget.Toast;
 
+import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 
 public class PlayerFragment extends Fragment {
 
@@ -59,17 +62,13 @@ public class PlayerFragment extends Fragment {
         mTxtMaxPosition = (TextView)rootView.findViewById(R.id.txtMaxPosition);
         mTxtCurrentPosition = (TextView)rootView.findViewById(R.id.txtCurrentPosition);
 
-
-        SharedPreferences settings = getActivity().getSharedPreferences("UserInfo", 0);
-        String ip = settings.getString("IP", "10.0.2.2");
-        String port = settings.getString("Port", "38475");
-
+        SharedPreferences settings = getActivity().getSharedPreferences(getResourcesString(R.string.setting_user_info), 0);
+        String ip = settings.getString(getResourcesString(R.string.setting_ip), getResourcesString(R.string.default_ip));
+        String port = settings.getString(getResourcesString(R.string.setting_port), getResourcesString(R.string.default_port));
         mEndpoint = "http://" + ip + ":" + port;
 
-        try{
-            HTTP task = new HTTP();
-            task.execute(mEndpoint).get(2000, TimeUnit.MILLISECONDS);
-        }catch(Exception ex){
+        if(!AIMPHandler.ping(mEndpoint)){
+            showError();
             getActivity().getFragmentManager().beginTransaction()
                     .replace(R.id.content_frame,new SettingsFragment()).commit();
             return rootView;
@@ -81,13 +80,17 @@ public class PlayerFragment extends Fragment {
         mBtnPlayPause.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                HTTP task = new HTTP();
-                if (mCurrentPlayPauseTag == R.drawable.ic_play){
-                    task.execute(mEndpoint + "/?action=player_play");
-                    updatePlayPauseButton("1");
-                } else {
-                    task.execute(mEndpoint + "/?action=player_pause");
-                    updatePlayPauseButton("2");
+                try{
+                    if (mCurrentPlayPauseTag == R.drawable.ic_play){
+                        AIMPHandler.play(mEndpoint);
+                        updatePlayPauseButton("1");
+                    } else {
+                        AIMPHandler.pause(mEndpoint);
+                        updatePlayPauseButton("2");
+                    }
+                } catch (InterruptedException | ExecutionException | TimeoutException e) {
+                    e.printStackTrace();
+                    showError();
                 }
             }
         });
@@ -95,34 +98,52 @@ public class PlayerFragment extends Fragment {
         mBtnNext.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                HTTP task = new HTTP();
-                task.execute(mEndpoint + "/?action=player_next");
+                try {
+                    AIMPHandler.playNext(mEndpoint);
+                } catch (InterruptedException | ExecutionException | TimeoutException e) {
+                    e.printStackTrace();
+                    showError();
+                }
             }
         });
 
         mBtnPrevious.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                HTTP task = new HTTP();
-                task.execute(mEndpoint + "/?action=player_prevous");
+                try {
+                    AIMPHandler.playPrevious(mEndpoint);
+                } catch (InterruptedException | ExecutionException | TimeoutException e) {
+                    e.printStackTrace();
+                    showError();
+                }
             }
         });
 
         mBtnShuffle.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                HTTP task = new HTTP();
-                task.execute(mEndpoint + "/?action=set_player_status&statusType=shuffle&value=" + (mCurrentShuffleTag ? "0" : "1"));
-                mCurrentShuffleTag = !mCurrentShuffleTag;
+                try {
+                    AIMPHandler.toggleShuffle(mEndpoint, mCurrentShuffleTag);
+                    mCurrentShuffleTag = !mCurrentShuffleTag;
+                    ((MainActivity)getActivity()).showMessage(mCurrentShuffleTag ? "On" : "Off", Toast.LENGTH_SHORT);
+                } catch (InterruptedException | ExecutionException | TimeoutException e) {
+                    e.printStackTrace();
+                    showError();
+                }
             }
         });
 
         mBtnRepeat.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                HTTP task = new HTTP();
-                task.execute(mEndpoint + "/?action=set_player_status&statusType=repeat&value=" + (mCurrentRepeatTag ? "0" : "1"));
-                mCurrentRepeatTag = !mCurrentRepeatTag;
+                try {
+                    AIMPHandler.toggleRepeat(mEndpoint, mCurrentRepeatTag);
+                    mCurrentRepeatTag = !mCurrentRepeatTag;
+                    ((MainActivity)getActivity()).showMessage(mCurrentRepeatTag ? "On" : "Off", Toast.LENGTH_SHORT);
+                } catch (InterruptedException | ExecutionException | TimeoutException e) {
+                    e.printStackTrace();
+                    showError();
+                }
             }
         });
 
@@ -138,7 +159,12 @@ public class PlayerFragment extends Fragment {
             @Override
             public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
                 if(fromUser){
-                    setTrackPosition(progress);
+                    try {
+                        AIMPHandler.setTrackPosition(mEndpoint, progress);
+                    } catch (InterruptedException | ExecutionException | TimeoutException e) {
+                        e.printStackTrace();
+                        showError();
+                    }
                 }
             }
         });
@@ -152,13 +178,20 @@ public class PlayerFragment extends Fragment {
 
             @Override
             public void run() {
-                int currentPosition = getTrackPosition();
-                if(currentPosition == 0){
-                    updateSongInfo();
+                int currentPosition = 0;
+                try {
+                    currentPosition = AIMPHandler.getTrackPosition(mEndpoint);
+                    if(currentPosition == 0){
+                        updateSongInfo();
+                    }
+                    mSeekBar.setProgress(currentPosition);
+                    mHandler.postDelayed(this, 1000);
+                    mTxtCurrentPosition.setText(getTime(currentPosition));
+                } catch (InterruptedException | ExecutionException | TimeoutException e) {
+                    e.printStackTrace();
+                    showError();
                 }
-                mSeekBar.setProgress(currentPosition);
-                mHandler.postDelayed(this, 1000);
-                mTxtCurrentPosition.setText(getTime(currentPosition));
+
             }
         });
     }
@@ -174,11 +207,9 @@ public class PlayerFragment extends Fragment {
     }
 
     void updateSongInfo() {
-        HTTP task = new HTTP();
         String songInfo = null;
         try {
-            String response = task.execute(mEndpoint + "/?action=get_song_current").get();
-            JSONObject obj = new JSONObject(response);
+            JSONObject obj = new JSONObject(AIMPHandler.getSongInfo(mEndpoint));
             songInfo = obj.getString("PlayingFileName");
             int length = Integer.parseInt(obj.getString("length"));
             mSeekBar.setMax(length);
@@ -186,8 +217,9 @@ public class PlayerFragment extends Fragment {
             mTxtMaxPosition.setText(getTime(length));
 
             passData(new Track(obj.getInt("PlayingFile"), songInfo, obj.getInt("PlayingList")));
-        } catch (InterruptedException | JSONException | ExecutionException e) {
+        } catch (JSONException | InterruptedException | ExecutionException | TimeoutException e) {
             e.printStackTrace();
+            showError();
         }
 
         mSongInfo.setText(songInfo);
@@ -200,13 +232,19 @@ public class PlayerFragment extends Fragment {
     }
 
     void updateStatuses() {
-        String playerStatus = getCustomStatus("4");
-        String shuffleStatus = getCustomStatus("41");
-        String repeatStatus = getCustomStatus("29");
+        try {
+            String playerStatus = AIMPHandler.getCustomStatus(mEndpoint, "4");
+            String shuffleStatus = AIMPHandler.getCustomStatus(mEndpoint, "41");
+            String repeatStatus = AIMPHandler.getCustomStatus(mEndpoint, "29");
 
-        updatePlayPauseButton(playerStatus);
-        updateShuffleStatus(shuffleStatus);
-        updateRepeatStatus(repeatStatus);
+            updatePlayPauseButton(playerStatus);
+            updateShuffleStatus(shuffleStatus);
+            updateRepeatStatus(repeatStatus);
+        } catch (InterruptedException | ExecutionException | TimeoutException e) {
+            e.printStackTrace();
+            showError();
+        }
+
     }
 
     void updateShuffleStatus(String shuffleStatus) {
@@ -248,39 +286,11 @@ public class PlayerFragment extends Fragment {
         }
     }
 
-    String getCustomStatus(String statusCode) {
-        HTTP task = new HTTP();
-        String response = "";
-        try {
-            response = task.execute(mEndpoint + "/?action=get_custom_status&status=" + statusCode).get();
-        } catch (InterruptedException | ExecutionException e) {
-            e.printStackTrace();
-        }
-        return response;
+    void showError(){
+        ((MainActivity)getActivity()).showError();
     }
 
-    void setCustomStatus(String statusCode, String value){
-        HTTP task = new HTTP();
-        task.execute(mEndpoint + "/?action=set_custom_status&status=" + statusCode + "&value=" + value);
+    String getResourcesString(int id){
+        return ((MainActivity)getActivity()).getResourcesString(id);
     }
-
-    void setTrackPosition(int position){
-        HTTP task = new HTTP();
-        task.execute(mEndpoint + "/?action=set_track_position&position=" + Integer.toString(position));
-    }
-
-    int getTrackPosition(){
-        HTTP task = new HTTP();
-        int position = 0;
-        try {
-            String response = task.execute(mEndpoint + "/?action=get_track_position").get();
-            JSONObject obj = new JSONObject(response);
-            position = obj.getInt("position");
-        } catch (InterruptedException | JSONException | ExecutionException e) {
-            e.printStackTrace();
-        }
-        return position;
-    }
-
-
 }

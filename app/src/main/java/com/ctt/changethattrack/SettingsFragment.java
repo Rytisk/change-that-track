@@ -38,10 +38,11 @@ public class SettingsFragment extends Fragment {
         mChbAutoLogin = (CheckBox)rootView.findViewById(R.id.checkBox);
         mBtnSave = (Button)rootView.findViewById(R.id.btnSave);
 
-        SharedPreferences settings = getActivity().getSharedPreferences("UserInfo", 0);
-        boolean autoLogin = settings.getBoolean("AutoLogin", false);
-        String ip = settings.getString("IP", "10.0.2.2");
-        String port = settings.getString("Port", "38475");
+        SharedPreferences settings = getActivity().getSharedPreferences(getResourcesString(R.string.setting_user_info), 0);
+        String ip = settings.getString(getResourcesString(R.string.setting_ip), getResourcesString(R.string.default_ip));
+        String port = settings.getString(getResourcesString(R.string.setting_port), getResourcesString(R.string.default_port));
+
+        boolean autoLogin = settings.getBoolean(getResourcesString(R.string.setting_auto_login), false);
 
         mTxtServerIP.setText(ip);
         mTxtPort.setText(port);
@@ -63,5 +64,9 @@ public class SettingsFragment extends Fragment {
             }
         });
         return rootView;
+    }
+
+    String getResourcesString(int id){
+        return ((MainActivity)getActivity()).getResourcesString(id);
     }
 }

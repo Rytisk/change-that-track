@@ -14,6 +14,8 @@ import android.widget.ListView;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeoutException;
 
 /**
  * Created by Rytis on 2017-10-16.
@@ -31,11 +33,17 @@ public class RecentTracksFragment extends Fragment {
 
         mRecentTracks = ((MainActivity)getActivity()).getRecentTracks();
 
-        SharedPreferences settings = getActivity().getSharedPreferences("UserInfo", 0);
-        String ip = settings.getString("IP", "10.0.2.2");
-        String port = settings.getString("Port", "38475");
-
+        SharedPreferences settings = getActivity().getSharedPreferences(getResourcesString(R.string.setting_user_info), 0);
+        String ip = settings.getString(getResourcesString(R.string.setting_ip), getResourcesString(R.string.default_ip));
+        String port = settings.getString(getResourcesString(R.string.setting_port), getResourcesString(R.string.default_port));
         mEndpoint = "http://" + ip + ":" + port;
+
+        if(!AIMPHandler.ping(mEndpoint)){
+            showError();
+            getActivity().getFragmentManager().beginTransaction()
+                    .replace(R.id.content_frame,new SettingsFragment()).commit();
+            return rootView;
+        }
         mListView = (ListView) rootView.findViewById(R.id.recentTracks);
 
         final ArrayAdapter<Track> gridViewArrayAdapter = new ArrayAdapter<Track>
@@ -47,13 +55,23 @@ public class RecentTracksFragment extends Fragment {
             public void onItemClick(AdapterView<?> parent, View v,
                                     int position, long id) {
                 Track track = (Track)parent.getItemAtPosition(position);
-                HTTP task = new HTTP();
-                task.execute(mEndpoint + "/?action=set_song_play&playlist=" + track.getPlaylistId() + "&song=" + track.getPosition());
+                try {
+                    AIMPHandler.setPlayedSong(mEndpoint, track.getPlaylistId(), track.getPosition());
+                } catch (InterruptedException | ExecutionException | TimeoutException e) {
+                    e.printStackTrace();
+                    showError();
+                }
             }
         });
 
         return rootView;
     }
 
+    void showError(){
+        ((MainActivity)getActivity()).showError();
+    }
 
+    String getResourcesString(int id){
+        return ((MainActivity)getActivity()).getResourcesString(id);
+    }
 }

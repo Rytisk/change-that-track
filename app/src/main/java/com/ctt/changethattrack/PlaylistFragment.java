@@ -21,6 +21,7 @@ import org.json.JSONObject;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeoutException;
 
 /**
  * Created by Rytis on 2017-10-15.
@@ -63,11 +64,17 @@ public class PlaylistFragment extends Fragment {
                              Bundle savedInstanceState) {
         View rootView = inflater.inflate(R.layout.fragment_playlist, container, false);
 
-        SharedPreferences settings = getActivity().getSharedPreferences("UserInfo", 0);
-        String ip = settings.getString("IP", "10.0.2.2");
-        String port = settings.getString("Port", "38475");
-
+        SharedPreferences settings = getActivity().getSharedPreferences(getResourcesString(R.string.setting_user_info), 0);
+        String ip = settings.getString(getResourcesString(R.string.setting_ip), getResourcesString(R.string.default_ip));
+        String port = settings.getString(getResourcesString(R.string.setting_port), getResourcesString(R.string.default_port));
         mEndpoint = "http://" + ip + ":" + port;
+
+        if(!AIMPHandler.ping(mEndpoint)){
+            showError();
+            getActivity().getFragmentManager().beginTransaction()
+                    .replace(R.id.content_frame,new SettingsFragment()).commit();
+            return rootView;
+        }
 
         mTabHost = (TabHost)rootView.findViewById(R.id.th_set_menu_tabhost);
         mTabHost.setup();
@@ -96,9 +103,14 @@ public class PlaylistFragment extends Fragment {
                     {
                         @Override
                         public void onItemClick(AdapterView<?> arg0, View view, int position, long id) {
-                            HTTP task = new HTTP();
-                            task.execute(mEndpoint + "/?action=set_song_play&playlist=" + arg0.getId() + "&song=" + position);
-                            passData(new Track(position, getTrackName(), arg0.getId()));
+                            try {
+                                AIMPHandler.setPlayedSong(mEndpoint, arg0.getId(), position);
+                                passData(new Track(position, getTrackName(), arg0.getId()));
+                            } catch (InterruptedException | ExecutionException | TimeoutException e) {
+                                e.printStackTrace();
+                                showError();
+                            }
+
                         }
                     }
             );
@@ -121,12 +133,12 @@ public class PlaylistFragment extends Fragment {
         HTTP task = new HTTP();
         String name = "";
         try {
-            String response = task.execute(mEndpoint + "/?action=get_song_current").get();
-            JSONObject obj = new JSONObject(response);
+            JSONObject obj = new JSONObject(AIMPHandler.getCurrentSong(mEndpoint));
             name = obj.getString("PlayingFileName");
 
-        } catch (InterruptedException | JSONException | ExecutionException e) {
+        } catch (InterruptedException | JSONException | ExecutionException | TimeoutException e) {
             e.printStackTrace();
+            showError();
         }
         return name;
     }
@@ -135,14 +147,14 @@ public class PlaylistFragment extends Fragment {
         HTTP task = new HTTP();
         List<Playlist> playlists = new ArrayList<Playlist>();
         try {
-            String response = task.execute(mEndpoint + "/?action=get_playlist_list").get();
-            JSONArray arr = new JSONArray(response);
+            JSONArray arr = new JSONArray(AIMPHandler.getPlaylistList(mEndpoint));
             for (int i = 0; i < arr.length(); i++) {
                 JSONObject ob = arr.getJSONObject(i);
                 playlists.add(new Playlist(ob.getString("name"), ob.getString("id")));
             }
-        } catch (InterruptedException | JSONException | ExecutionException e) {
+        } catch (InterruptedException | JSONException | ExecutionException | TimeoutException e) {
             e.printStackTrace();
+            showError();
         }
         return playlists;
     }
@@ -151,8 +163,7 @@ public class PlaylistFragment extends Fragment {
         HTTP task = new HTTP();
         List<String> tracksList = new ArrayList<String>();
         try {
-            String response = task.execute(mEndpoint + "/?action=get_playlist_songs&id=" + playlistId).get();
-            JSONObject obj = new JSONObject(response);
+            JSONObject obj = new JSONObject(AIMPHandler.getPlaylistSongs(mEndpoint, playlistId));
             JSONArray arr = obj.getJSONArray("songs");
             for (int i = 0; i < arr.length(); i++) {
                 JSONObject ob = null;
@@ -160,12 +171,21 @@ public class PlaylistFragment extends Fragment {
                 tracksList.add(ob.getString("name"));
             }
 
-        } catch (InterruptedException | JSONException | ExecutionException e) {
+        } catch (InterruptedException | JSONException | ExecutionException | TimeoutException e) {
             e.printStackTrace();
+            showError();
         }
         String[] tracks = new String[tracksList.size()];
         tracks = tracksList.toArray(tracks);
 
         return tracks;
+    }
+
+    void showError(){
+        ((MainActivity)getActivity()).showError();
+    }
+
+    String getResourcesString(int id){
+        return ((MainActivity)getActivity()).getResourcesString(id);
     }
 }

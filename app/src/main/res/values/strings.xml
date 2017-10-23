@@ -8,4 +8,11 @@
     </string-array>
     <string name="txtPort">Port:</string>
     <string name="txtIP">Server IP:</string>
+    <string name="error">Connection error</string>
+    <string name="setting_ip">IP</string>
+    <string name="setting_port">Port</string>
+    <string name="setting_auto_login">AutoLogin</string>
+    <string name="setting_user_info">UserInfo</string>
+    <string name="default_ip">10.0.2.2</string>
+    <string name="default_port">38475</string>
 </resources>

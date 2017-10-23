@@ -11,10 +11,12 @@ import android.app.Fragment;
 import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.ListView;
+import android.widget.Toast;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeoutException;
 
 /**
  * Created by Rytis on 2017-10-15.
@@ -24,11 +26,9 @@ public class MainActivity extends Activity implements PlaylistFragment.OnDataPas
     private String[] mFragments;
     private DrawerLayout mDrawerLayout;
     private ListView mDrawerList;
-
+    private Toast mToast;
     private String mEndpoint;
-
     private List<Track> mRecentTracks = new ArrayList<Track>();
-
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
@@ -38,19 +38,17 @@ public class MainActivity extends Activity implements PlaylistFragment.OnDataPas
         mFragments = getResources().getStringArray(R.array.fragments_array);
         mDrawerLayout = (DrawerLayout) findViewById(R.id.drawer_layout);
         mDrawerList = (ListView) findViewById(R.id.left_drawer);
-
-        mDrawerList.setAdapter(new ArrayAdapter<String>(this,
+        mDrawerList.setAdapter(new ArrayAdapter<>(this,
                 R.layout.drawer_list_item, mFragments));
-
         mDrawerList.setOnItemClickListener(new DrawerItemClickListener());
 
-        SharedPreferences settings = getSharedPreferences("UserInfo", 0);
-        boolean autoLogin = settings.getBoolean("AutoLogin", false);
-        if(autoLogin) {
-            String ip = settings.getString("IP", "10.0.2.2");
-            String port = settings.getString("Port", "38475");
+        SharedPreferences settings = getSharedPreferences(getResourcesString(R.string.setting_user_info), 0);
+        String ip = settings.getString(getResourcesString(R.string.setting_ip), getResourcesString(R.string.default_ip));
+        String port = settings.getString(getResourcesString(R.string.setting_port), getResourcesString(R.string.default_port));
+        mEndpoint = "http://" + ip + ":" + port;
 
-            mEndpoint = "http://" + ip + ":" + port;
+        boolean autoLogin = settings.getBoolean(getResourcesString(R.string.setting_auto_login), false);
+        if(autoLogin) {
             selectItem(0);
         }
         else {
@@ -100,47 +98,43 @@ public class MainActivity extends Activity implements PlaylistFragment.OnDataPas
         if (count == 1) {
             getFragmentManager().popBackStack();
             super.onBackPressed();
-            //additional code
         } else {
             getFragmentManager().popBackStack();
         }
 
     }
 
-    void setVolume(int volume){
-        HTTP task = new HTTP();
-        task.execute(mEndpoint + "/?action=set_volume&volume=" + Integer.toString(volume));
-    }
-
-    int getVolume(){
-        HTTP task = new HTTP();
-        int volume = 0;
-        try {
-            volume = Integer.parseInt(task.execute(mEndpoint + "/?action=get_volume").get());
-        } catch (InterruptedException e) {
-            e.printStackTrace();
-        } catch (ExecutionException e) {
-            e.printStackTrace();
-        }
-        return volume;
-    }
-
     @Override
     public boolean onKeyDown(int keyCode, KeyEvent event) {
         switch (keyCode) {
             case KeyEvent.KEYCODE_VOLUME_UP:
-                int volUp = getVolume();
-                if (volUp + 10 <= 100)
-                    setVolume(volUp + 10);
-                else if (volUp > 90)
-                    setVolume(100);
+                int volUp = 0;
+                try {
+                    volUp = AIMPHandler.getVolume(mEndpoint);
+                    if (volUp + 10 <= 100)
+                        volUp += 10;
+                    else if (volUp > 90)
+                        volUp = 100;
+                    AIMPHandler.setVolume(mEndpoint, volUp);
+                    showMessage("Volume: " + volUp, Toast.LENGTH_SHORT);
+                } catch (TimeoutException | ExecutionException | InterruptedException e) {
+                    e.printStackTrace();
+                    showError();
+                }
                 return true;
             case KeyEvent.KEYCODE_VOLUME_DOWN:
-                int volDown = getVolume();
-                if (volDown - 10 >= 0)
-                    setVolume(volDown - 10);
-                else if (volDown < 10)
-                    setVolume(0);
+                try {
+                    int volDown = AIMPHandler.getVolume(mEndpoint);
+                    if (volDown - 10 >= 0)
+                        volDown -= 10;
+                    else if (volDown < 10)
+                        volDown = 0;
+                    AIMPHandler.setVolume(mEndpoint, volDown);
+                    showMessage("Volume: " + volDown, Toast.LENGTH_SHORT);
+                } catch (TimeoutException | ExecutionException | InterruptedException e) {
+                    e.printStackTrace();
+                    showError();
+                }
                 return true;
             default:
                 return super.onKeyDown(keyCode, event);
@@ -162,5 +156,18 @@ public class MainActivity extends Activity implements PlaylistFragment.OnDataPas
         return mRecentTracks;
     }
 
+    public void showError(){
+        showMessage(getResources().getString(R.string.error), Toast.LENGTH_SHORT);
+    }
+
+    public void showMessage(String message, int duration){
+        if(mToast != null) mToast.cancel();
+        mToast = Toast.makeText(MainActivity.this, message, duration);
+        mToast.show();
+    }
+
+    public String getResourcesString(int id){
+        return getResources().getString(id);
+    }
 
 }
